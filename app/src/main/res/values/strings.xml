@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">WeatherApp</string>
+    <string name="error">Error</string>
+    <string name="back">Back</string>
+    <string name="search">Name of the city</string>
+    <string name="clear">Clear</string>
+</resources>
