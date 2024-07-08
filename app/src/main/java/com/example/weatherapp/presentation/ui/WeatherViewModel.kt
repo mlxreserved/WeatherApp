@@ -19,7 +19,6 @@ import com.example.weatherapp.utils.WeatherResult
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-private const val COORDINATE_TAG = "COORDINATE"
 private const val WEATHER_TAG = "WEATHER"
 
 class WeatherViewModel: ViewModel() {
@@ -28,27 +27,36 @@ class WeatherViewModel: ViewModel() {
     var weatherUiState: WeatherResult by mutableStateOf(WeatherResult.Loading)
         private set
 
+    var expanded by mutableStateOf(false)
+        private set
+
+    var isSearch by mutableStateOf(false)
+        private set
+
     // Город, для которого ищется погода
     var textFieldCity by  mutableStateOf("")
         private set
 
+    val languageMap = mapOf("ru" to "ru_RU", "en" to "en_EN")
+
     // Язык, на котором отображается информация о погоде
-    var lang by mutableStateOf("ru_RU")
+    var lang by mutableStateOf(languageMap["Russian"] ?: "ru_RU")
         private set
 
     fun getWeather(city: String,language: String){
-        viewModelScope.launch{
-            val weatherRepository = WeatherRepository()
-            weatherUiState = WeatherResult.Loading
-            weatherUiState = try{ // Попытка получить погоду
-                val (coordinateOfCity, nameCity) = getCoordinate(city)
-                val weather = weatherRepository.getWeather(coordinateOfCity,language)
-                weather.location.name = nameCity
-                WeatherResult.Success(weather)
-            } catch (e: IOException) {
-                Log.e(WEATHER_TAG, "${e.message}")
-                WeatherResult.Error("${e.message}")
-/*          try{ // Попытка получить погоду в городах, которые не распознаются
+        if (city.isNotEmpty()) {
+            viewModelScope.launch {
+                val weatherRepository = WeatherRepository()
+                weatherUiState = WeatherResult.Loading
+                weatherUiState = try { // Попытка получить погоду
+                    val (coordinateOfCity, nameCity) = getCoordinate(city)
+                    val weather = weatherRepository.getWeather(coordinateOfCity, language)
+                    weather.location.name = nameCity
+                    WeatherResult.Success(weather)
+                } catch (e: IOException) {
+                    Log.e(WEATHER_TAG, "${e.message}")
+                    WeatherResult.Error("${e.message}")
+                    /*          try{ // Попытка получить погоду в городах, которые не распознаются
                     val (coordinateOfCity, nameCity) = getCoordinate(city)
                     val weather = weatherRepository.getWeather(coordinateOfCity,language)
                     weather.location.name = nameCity
@@ -57,8 +65,9 @@ class WeatherViewModel: ViewModel() {
                     WeatherResult.Error("${e.message}")
                 }
                 */
-            }
+                }
 
+            }
         }
     }
 
@@ -72,6 +81,19 @@ class WeatherViewModel: ViewModel() {
     // Изменение состояния поля ввода
     fun updateCity(input: String){
         textFieldCity = input
+    }
+
+    fun changeIsSearch(){
+        isSearch = !isSearch
+    }
+
+    fun changeExpanded(): Boolean{
+        expanded = !expanded
+        return expanded
+    }
+
+    fun changeLanguage(selectedLanguage: String){
+        lang = languageMap[selectedLanguage] ?: "ru_RU"
     }
 
     fun clearCity(){
