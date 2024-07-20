@@ -25,8 +25,20 @@ data class FeatureMember(
 @Serializable
 data class GeoObject(
     val Point: Point,
-    val name: String
+    val name: String,
+    val metaDataProperty: MetaDataProperty
 )
+
+@Serializable
+data class MetaDataProperty(
+    val GeocoderMetaData: GeocoderMetaData
+)
+
+@Serializable
+data class GeocoderMetaData(
+    val text: String
+)
+
 
 
 @Serializable

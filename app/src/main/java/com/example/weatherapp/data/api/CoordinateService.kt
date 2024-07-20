@@ -17,8 +17,9 @@ interface CoordinateService {
         @Query("geocode") geocode: String,
         @Query("apikey") apiKey: String,
         @Query("lang") lang: String,
-        @Query("format") format: String = "json",
+        @Query("format") format: String = "json"
     ): Coordinate
+
 
     companion object{
         fun create(): CoordinateService {

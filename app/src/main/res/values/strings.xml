@@ -4,4 +4,11 @@
     <string name="back">Back</string>
     <string name="search">Name of the city</string>
     <string name="clear">Clear</string>
+    <string name="loading">Loading</string>
+    <string name="loading_maintext">You have not chosen a city</string>
+    <string name="loading_choose_text">Choose a city</string>
+    <string name="today">Today</string>
+    <string name="three_day_forecast">3-day forecast</string>
+    <string name="day_temperature">Day %1$d°</string>
+    <string name="night_temperature">Night %1$d°</string>
 </resources>

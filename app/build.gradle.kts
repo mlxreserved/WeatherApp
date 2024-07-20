@@ -1,9 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-kapt")
     kotlin("plugin.serialization") version "2.0.0"
 }
+
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+localProperties.load(FileInputStream(localPropertiesFile))
 
 android {
     namespace = "com.example.weatherapp"
@@ -16,6 +23,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField("String", "KEY_WEATHER", localProperties.getProperty("keyWeather"))
+        buildConfigField("String", "KEY_COORDINATE", localProperties.getProperty("keyCoordinate"))
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -23,6 +33,7 @@ android {
     }
 
     buildTypes {
+
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -39,6 +50,7 @@ android {
         jvmTarget = "1.8"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     composeOptions {
@@ -74,6 +86,10 @@ dependencies {
     // Dagger 2
     implementation("com.google.dagger:dagger:2.51.1")
     kapt("com.google.dagger:dagger-compiler:2.51.1")
+
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    implementation("com.github.pemistahl:lingua:1.2.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

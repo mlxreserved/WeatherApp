@@ -12,10 +12,12 @@ private const val BASE_URL = "https://api.weatherapi.com/v1/"
 
 interface WeatherService {
 
-    @GET("current.json")
+    @GET("forecast.json")
     suspend fun getWeather(@Query("q") city: String,
                            @Query("lang") lang: String,
-                           @Query("key") key: String): Weather
+                           @Query("key") key: String,
+                           @Query("days") days: String): Weather
+
 
 
     companion object{
