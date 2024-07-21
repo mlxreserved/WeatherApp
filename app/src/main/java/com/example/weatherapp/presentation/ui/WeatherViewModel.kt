@@ -12,12 +12,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.weatherapp.data.api.WeatherService
+import com.example.weatherapp.data.api.model.Coordinate
 import com.example.weatherapp.data.api.model.Hour
 import com.example.weatherapp.data.api.model.Weather
 import com.example.weatherapp.data.repository.CoordinateRepository
+import com.example.weatherapp.data.repository.CoordinateRepositoryImpl
 import com.example.weatherapp.data.repository.WeatherRepository
+import com.example.weatherapp.data.repository.WeatherRepositoryImpl
+import com.example.weatherapp.di.MainApp
 import com.example.weatherapp.utils.WeatherResult
 import com.github.pemistahl.lingua.api.Language
 import com.github.pemistahl.lingua.api.LanguageDetector
@@ -30,11 +39,18 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import javax.inject.Inject
 
 private const val WEATHER_TAG = "WEATHER"
 private const val COORDINATE_TAG = "COORDINATE"
 
-class WeatherViewModel: ViewModel() {
+
+class WeatherViewModel (
+    private val weatherRepository: WeatherRepository,
+    private val coordinateRepository: CoordinateRepository
+): ViewModel() {
+
+
 
     // Результат погодного запроса
     var weatherUiState: WeatherResult by mutableStateOf(WeatherResult.Loading)
@@ -53,17 +69,15 @@ class WeatherViewModel: ViewModel() {
     var textFieldCity by  mutableStateOf("")
         private set
 
-    val languageMap = mapOf("ru" to "ru_RU", "en" to "en_US")
+    private val languageMap = mapOf("ru" to "ru_RU", "en" to "en_US")
 
     // Язык, на котором отображается информация о погоде
-    var lang by mutableStateOf("ru")
-        private set
+    private var lang by mutableStateOf("ru")
 
     fun getWeather(city: String){
         if (city.isNotEmpty()) {
             changeIsLoaded()
             viewModelScope.launch {
-                val weatherRepository = WeatherRepository()
                 weatherUiState = WeatherResult.Loading
                 weatherUiState = try { // Попытка получить погоду
                     val (coordinateOfCity, nameCity) = getCoordinate(city)
@@ -84,19 +98,32 @@ class WeatherViewModel: ViewModel() {
         getLanguage(city)
         viewModelScope.launch {
             try {
-                val coordinateRepository = CoordinateRepository()
-                coordinateList = coordinateRepository.getMultiCoordinate(city = city, languageMap[lang] ?: "ru_RU")
+                val res = coordinateRepository.getCoordinate(city = city, languageMap[lang] ?: "ru_RU")
+                coordinateList = handleNameOfCity(res)
             } catch(e: IOException){
                 Log.e(COORDINATE_TAG, "${e.message}")
             }
         }
     }
 
+    private fun handleNameOfCity(res: Coordinate): List<String>{
+        val listOfCoordinates = mutableListOf<String>()
+        for(i in res.response.GeoObjectCollection.featureMember){
+            var cityName = i.GeoObject.metaDataProperty.GeocoderMetaData.text
+            val cityNameItems = cityName.split(", ").toMutableList()
+            if(cityNameItems.size > 1) {
+                cityNameItems.removeFirst()
+            }
+            cityName = cityNameItems.joinToString(", ")
+            listOfCoordinates.add(cityName)
+        }
+        return listOfCoordinates
+    }
+
     // Получение координат города
     private suspend fun getCoordinate(city: String): Pair<String,String> {
         try {
-            val coordinateRepository = CoordinateRepository()
-            val coordinate: Pair<String, String> = coordinateRepository.getCoordinate(city = city, languageMap[lang] ?: "ru_RU")
+            val coordinate: Pair<String, String> = convertCoordinate(coordinateRepository.getCoordinate(city = city, languageMap[lang] ?: "ru_RU"))
             return coordinate
         } catch (e: IOException){
             Log.e(COORDINATE_TAG,"${e.message}")
@@ -155,6 +182,26 @@ class WeatherViewModel: ViewModel() {
         }
         for(i in 0..LocalTime.now().hour){
             hourList.add(weather.forecast.forecastday[1].hour[i])
+        }
+    }
+
+    private fun convertCoordinate(res: Coordinate): Pair<String,String>{
+        val position =
+            res.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos.split(" ")
+                .reversed().joinToString(",")
+        val cityName = res.response.GeoObjectCollection.featureMember[0].GeoObject.name
+        return Pair(position, cityName)
+    }
+
+    companion object{
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = (this[APPLICATION_KEY] as MainApp)
+                val weatherRepository = application.appComponent.weatherRepository
+                val coordinateRepository = application.appComponent.coordinateRepository
+                WeatherViewModel(weatherRepository = weatherRepository,
+                    coordinateRepository = coordinateRepository)
+            }
         }
     }
 }

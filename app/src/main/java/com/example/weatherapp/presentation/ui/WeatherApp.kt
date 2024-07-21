@@ -45,23 +45,17 @@ import com.example.weatherapp.presentation.ui.screens.MainScreen
 import com.example.weatherapp.presentation.ui.screens.SearchScreen
 import com.example.weatherapp.utils.WeatherAppScreens
 import com.example.weatherapp.utils.WeatherResult
-
-
-
-
+import javax.inject.Inject
 
 
 @Composable
 fun WeatherApp(navController: NavHostController,
                modifier: Modifier = Modifier){
 
-    val weatherViewModel: WeatherViewModel = viewModel()
+    val weatherViewModel: WeatherViewModel = viewModel(factory = WeatherViewModel.Factory)
     val state = weatherViewModel.weatherUiState
     val city = weatherViewModel.textFieldCity
-    val lang = weatherViewModel.lang
     val keyboardController = LocalFocusManager.current
-
-
     Surface{
         NavHost(
             navController = navController,
