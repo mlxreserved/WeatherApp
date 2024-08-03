@@ -11,4 +11,9 @@
     <string name="three_day_forecast">3-day forecast</string>
     <string name="day_temperature">Day %1$d°</string>
     <string name="night_temperature">Night %1$d°</string>
+    <string name="morning">Morning</string>
+    <string name="day">Day</string>
+    <string name="evening">Evening</string>
+    <string name="night">Night</string>
+    <string name="history">History of requests</string>
 </resources>

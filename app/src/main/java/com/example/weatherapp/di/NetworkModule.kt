@@ -1,8 +1,11 @@
 package com.example.weatherapp.di
 
+import android.content.Context
+import android.provider.ContactsContract.Data
 import com.example.weatherapp.data.api.CoordinateService
 import com.example.weatherapp.data.api.WeatherService
 import com.example.weatherapp.data.api.model.Weather
+import com.example.weatherapp.data.repository.CitiesRepository
 import com.example.weatherapp.data.repository.CoordinateRepository
 import com.example.weatherapp.data.repository.CoordinateRepositoryImpl
 import com.example.weatherapp.data.repository.WeatherRepository
@@ -10,6 +13,7 @@ import com.example.weatherapp.data.repository.WeatherRepositoryImpl
 import com.example.weatherapp.presentation.ui.WeatherViewModel
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Binds
+import dagger.BindsInstance
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -27,6 +31,7 @@ private const val BASE_URL_WEATHER = "https://api.weatherapi.com/v1/"
 interface AppComponent{
     val weatherRepository: WeatherRepository
     val coordinateRepository: CoordinateRepository
+
 }
 
 @Module(includes = [NetworkModule::class, AppBindModule::class])

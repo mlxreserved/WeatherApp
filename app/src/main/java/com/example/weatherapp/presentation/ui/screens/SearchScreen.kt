@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Card
@@ -30,13 +31,19 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.currentCompositionErrors
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.weatherapp.R
+import com.example.weatherapp.presentation.ui.SearchUiState
+import com.example.weatherapp.presentation.ui.WeatherAppUiState
 import com.example.weatherapp.presentation.ui.WeatherViewModel
+import com.example.weatherapp.utils.WeatherResult
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +87,7 @@ fun SearchTopBar(
         navigationIcon = {
             IconButton(onClick = onBackButtonClick) {
                 Icon(
-                    imageVector = Icons.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back)
                 )
             }
@@ -90,8 +97,9 @@ fun SearchTopBar(
 
 @Composable
 fun SearchScreen(
+    stateSearch: SearchUiState,
     navController: NavHostController,
-    city: String,
+    state: WeatherAppUiState,
     onSearch: (KeyboardActionScope) -> Unit,
     weatherViewModel: WeatherViewModel,
     onBackButtonClick: () -> Unit,
@@ -101,22 +109,47 @@ fun SearchScreen(
     Scaffold (
         topBar = {
             SearchTopBar(
-                city = city,
+                city = state.textFieldCity,
                 onSearch = onSearch,
                 weatherViewModel = weatherViewModel,
                 onBackButtonClick = onBackButtonClick)
         }
     ){ innerPadding ->
-        LazyColumn(modifier = Modifier
-            .padding(top = innerPadding.calculateTopPadding())
-            .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)){
-            items(weatherViewModel.coordinateList){ currentCity ->
-                SearchCard(city = currentCity, onClick = {
-                    weatherViewModel.getWeather(currentCity)
-                    weatherViewModel.closeSearchScreen()
-                    navController.navigateUp()
-                } )
+        if(state.textFieldCity.isNotBlank()) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.coordinateList) { currentCity ->
+                    SearchCard(city = currentCity, onClick = {
+
+                        weatherViewModel.getWeather(currentCity, false)
+                        weatherViewModel.closeSearchScreen()
+                        navController.navigateUp()
+
+                    })
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(top = innerPadding.calculateTopPadding() + 8.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item{
+                    Text(text = stringResource(R.string.history), fontSize = 24.sp)
+                }
+                items(stateSearch.storyOfSearch) { currentCity ->
+                    SearchCard(city = currentCity.name, onClick = {
+                        weatherViewModel.getWeather(currentCity.name, false)
+                        weatherViewModel.closeSearchScreen()
+                        navController.navigateUp()
+
+                    })
+                }
             }
         }
     }

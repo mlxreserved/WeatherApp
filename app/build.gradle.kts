@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-kapt")
     kotlin("plugin.serialization") version "2.0.0"
+    id("com.google.devtools.ksp")
 }
 
 val localPropertiesFile = rootProject.file("local.properties")
@@ -68,16 +69,19 @@ dependencies {
     // Import the Compose BOM
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
     implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.compose.material:material:1.6.8")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     // Navigation
     implementation(libs.androidx.navigation.compose)
     // Retrofit 2
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
+
+    // Needed to get a view model reference in Jetpack Compose
 
     // kotlin Serialization
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
@@ -88,6 +92,11 @@ dependencies {
     kapt("com.google.dagger:dagger-compiler:2.51.1")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    //Room
+    implementation("androidx.room:room-runtime:2.4.3")
+    kapt("androidx.room:room-compiler:2.4.3")
+    implementation("androidx.room:room-ktx:2.4.3")
 
     implementation("com.github.pemistahl:lingua:1.2.2")
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Network
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -18,10 +19,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.weatherapp.data.City
 import com.example.weatherapp.data.api.WeatherService
 import com.example.weatherapp.data.api.model.Coordinate
+import com.example.weatherapp.data.api.model.Forecastday
 import com.example.weatherapp.data.api.model.Hour
 import com.example.weatherapp.data.api.model.Weather
+import com.example.weatherapp.data.repository.CitiesRepository
 import com.example.weatherapp.data.repository.CoordinateRepository
 import com.example.weatherapp.data.repository.CoordinateRepositoryImpl
 import com.example.weatherapp.data.repository.WeatherRepository
@@ -31,12 +35,26 @@ import com.example.weatherapp.utils.WeatherResult
 import com.github.pemistahl.lingua.api.Language
 import com.github.pemistahl.lingua.api.LanguageDetector
 import com.github.pemistahl.lingua.api.LanguageDetectorBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import javax.inject.Inject
@@ -45,61 +63,110 @@ private const val WEATHER_TAG = "WEATHER"
 private const val COORDINATE_TAG = "COORDINATE"
 
 
+data class WeatherAppUiState(
+    val weatherUiState: WeatherResult = WeatherResult.Loading,
+    val selectedItem: Int = -1,
+
+    //val isLoaded: Boolean = false,
+    val coordinateList: List<String> = emptyList(),
+    val hourList: MutableList<Hour> = mutableListOf(),
+    var textFieldCity: String = "",
+    val languageMap: Map<String, String> = mapOf("ru" to "ru_RU", "en" to "en_US"),
+    val lang: String = "ru"
+    )
+
+data class SearchUiState(
+    val storyOfSearch: List<City> = listOf(),
+    )
+
+
+//
+//data class CityState(
+//    val id: Int = 0,
+//    val name: String = "",
+//    val coordinate: String = "",
+//    val date: Long = 0L
+//)
+//
+//fun CityState.toCity(): City = City(
+//    id = id,
+//    name = name,
+//    coordinate = coordinate,
+//    date = date
+//)
+
 class WeatherViewModel (
     private val weatherRepository: WeatherRepository,
-    private val coordinateRepository: CoordinateRepository
+    private val coordinateRepository: CoordinateRepository,
+    private val citiesRepository: CitiesRepository
 ): ViewModel() {
 
 
 
-    // Результат погодного запроса
-    var weatherUiState: WeatherResult by mutableStateOf(WeatherResult.Loading)
-        private set
+    private val _uiStateWeather = MutableStateFlow(WeatherAppUiState())
+    val uiStateWeather: StateFlow<WeatherAppUiState> = _uiStateWeather.asStateFlow()
 
-    var isLoaded by mutableStateOf(false)
-        private set
+    private val _uiStateSearch = MutableStateFlow(SearchUiState())
+    val uiStateSearch: StateFlow<SearchUiState> = citiesRepository.getAllCities().map { SearchUiState(it) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS ),
+            initialValue = SearchUiState()
+        )
 
-    var coordinateList: List<String> by mutableStateOf(emptyList())
-        private set
+    init{
+        getWeather("Москва", true)
+    }
 
-    var hourList = mutableListOf<Hour>()
-        private set
-
-    // Город, для которого ищется погода
-    var textFieldCity by  mutableStateOf("")
-        private set
-
-    private val languageMap = mapOf("ru" to "ru_RU", "en" to "en_US")
-
-    // Язык, на котором отображается информация о погоде
-    private var lang by mutableStateOf("ru")
-
-    fun getWeather(city: String){
-        if (city.isNotEmpty()) {
-            changeIsLoaded()
+    fun getWeather(city: String, isReloading: Boolean){
+        if (city.isNotBlank()) {
+            getLanguage(city)
+            //changeIsLoaded()
             viewModelScope.launch {
-                weatherUiState = WeatherResult.Loading
-                weatherUiState = try { // Попытка получить погоду
-                    val (coordinateOfCity, nameCity) = getCoordinate(city)
-                    val weather = weatherRepository.getWeather(coordinateOfCity, lang)
+                _uiStateWeather.update { it.copy(weatherUiState = WeatherResult.Loading) }
+                val res = try { // Попытка получить погоду
+                    val (coordinateOfCity,nameCity, nameFullCity) = getCoordinate(city)
+                    val weather =
+                        weatherRepository.getWeather(coordinateOfCity, _uiStateWeather.value.lang)
                     weather.location.name = nameCity
+                    if(!isReloading) {
+                        saveCity(
+                            City(
+                                name = nameFullCity,
+                                coordinate = coordinateOfCity,
+                                date = getCurrentTime()
+                            )
+                        )
+                    }
                     addHourToHourList(weather)
                     closeSearchScreen()
                     WeatherResult.Success(weather)
-                } catch (e: IOException) {
+
+                } catch (e: Exception) {
                     Log.e(WEATHER_TAG, "${e.message}")
                     WeatherResult.Error("${e.message}")
                 }
+                _uiStateWeather.update {
+                    it.copy(
+                        weatherUiState = res
+                    )
+                }
             }
         }
+    }
+
+
+    @SuppressLint("NewApi")
+    fun getCurrentTime(): Long{
+        return LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
     }
 
     fun getMultiCoordinate(city: String) {
         getLanguage(city)
         viewModelScope.launch {
             try {
-                val res = coordinateRepository.getCoordinate(city = city, languageMap[lang] ?: "ru_RU")
-                coordinateList = handleNameOfCity(res)
+                val res = coordinateRepository.getCoordinate(city = city, _uiStateWeather.value.languageMap[_uiStateWeather.value.lang] ?: "ru_RU")
+                _uiStateWeather.update { it.copy(coordinateList = handleNameOfCity(res)) }
             } catch(e: IOException){
                 Log.e(COORDINATE_TAG, "${e.message}")
             }
@@ -121,39 +188,63 @@ class WeatherViewModel (
     }
 
     // Получение координат города
-    private suspend fun getCoordinate(city: String): Pair<String,String> {
+    private suspend fun getCoordinate(city: String): Triple<String,String, String> {
         try {
-            val coordinate: Pair<String, String> = convertCoordinate(coordinateRepository.getCoordinate(city = city, languageMap[lang] ?: "ru_RU"))
+            val coordinate: Triple<String, String, String> = convertCoordinate(coordinateRepository.getCoordinate(city = city, _uiStateWeather.value.languageMap[_uiStateWeather.value.lang] ?: "ru_RU"))
             return coordinate
         } catch (e: IOException){
             Log.e(COORDINATE_TAG,"${e.message}")
-            return Pair("","")
+            return Triple("","","")
         }
     }
 
     // Изменение состояния поля ввода
     fun updateCity(input: String){
-        textFieldCity = input
+        _uiStateWeather.update { it.copy(textFieldCity = input) }
+
+    }
+
+    fun changeSelectedItem(item: Int){
+        _uiStateWeather.update { it.copy(selectedItem = item) }
     }
 
     fun clearCity(){
-        textFieldCity = ""
+        _uiStateWeather.update { it.copy(textFieldCity = "") }
     }
 
+    private fun saveCity(city: City){
+        viewModelScope.launch(Dispatchers.IO) {
+            if(uiStateSearch.value.storyOfSearch.size==10){
+                citiesRepository.delete()
+            }
+            citiesRepository.insert(city)
+        }
+    }
+
+
     fun closeSearchScreen(){
-        coordinateList = emptyList()
+        _uiStateWeather.update { it.copy(coordinateList = emptyList()) }
         clearCity()
     }
 
-    private fun changeIsLoaded(){
-        isLoaded = true
-    }
 
     @SuppressLint("NewApi")
-    fun formatDate(date: String, week: Boolean): String{
+    fun formatDate(date: String, week: Boolean, short: Boolean): String{
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        val dateFormatter = if(week) DateTimeFormatter.ofPattern("EEEE")
-        else DateTimeFormatter.ofPattern("dd MMMM")
+        val dateFormatter = if(week) {
+            if(short){
+                DateTimeFormatter.ofPattern("E")
+            } else {
+                DateTimeFormatter.ofPattern("EEEE")
+            }
+        }
+        else {
+            if(short){
+                DateTimeFormatter.ofPattern("dd")
+            } else {
+                DateTimeFormatter.ofPattern("dd MMMM")
+            }
+        }
 
         val formatedDate = LocalDate.parse(date,formatter)
         return formatedDate.format(dateFormatter)
@@ -163,7 +254,7 @@ class WeatherViewModel (
     fun getLanguage(city: String){
         val detector: LanguageDetector = LanguageDetectorBuilder.fromLanguages(Language.ENGLISH, Language.RUSSIAN).build()
         val detectedLanguage: Language = detector.detectLanguageOf(text = city)
-        lang = detectedLanguage.name.substring(0,2).lowercase()
+        _uiStateWeather.update { it.copy(lang = detectedLanguage.name.substring(0,2).lowercase()) }
     }
 
     @SuppressLint("NewApi")
@@ -176,31 +267,43 @@ class WeatherViewModel (
 
     @SuppressLint("NewApi")
     private fun addHourToHourList(weather: Weather){
-        hourList.clear()
+        _uiStateWeather.update { it.copy(hourList = mutableListOf()) }
         for(i in LocalTime.now().hour..< weather.forecast.forecastday[0].hour.size) {
-            hourList.add(weather.forecast.forecastday[0].hour[i])
+            _uiStateWeather.value.hourList.add(weather.forecast.forecastday[0].hour[i])
         }
         for(i in 0..LocalTime.now().hour){
-            hourList.add(weather.forecast.forecastday[1].hour[i])
+            _uiStateWeather.value.hourList.add(weather.forecast.forecastday[1].hour[i])
         }
     }
 
-    private fun convertCoordinate(res: Coordinate): Pair<String,String>{
+    private fun convertCoordinate(res: Coordinate): Triple<String,String, String>{
         val position =
             res.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos.split(" ")
                 .reversed().joinToString(",")
         val cityName = res.response.GeoObjectCollection.featureMember[0].GeoObject.name
-        return Pair(position, cityName)
+        var cityFullName = res.response.GeoObjectCollection.featureMember[0].GeoObject.metaDataProperty.GeocoderMetaData.text
+        val cityNameItems = cityFullName.split(", ").toMutableList()
+        if(cityNameItems.size > 1) {
+            cityNameItems.removeFirst()
+        }
+        cityFullName = cityNameItems.joinToString(", ")
+        return Triple(position, cityName, cityFullName)
+
     }
 
+
     companion object{
+        private const val TIMEOUT_MILLIS = 5_000L
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as MainApp)
                 val weatherRepository = application.appComponent.weatherRepository
                 val coordinateRepository = application.appComponent.coordinateRepository
+                val citiesRepository = application.databaseComponent.citiesRepository
                 WeatherViewModel(weatherRepository = weatherRepository,
-                    coordinateRepository = coordinateRepository)
+                    coordinateRepository = coordinateRepository,
+                    citiesRepository = citiesRepository)
             }
         }
     }
