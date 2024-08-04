@@ -1,17 +1,23 @@
 package com.example.weatherapp.presentation.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,9 +28,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.currentCompositionErrors
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -43,6 +54,7 @@ import com.example.weatherapp.presentation.ui.WeatherViewModel
 import com.example.weatherapp.utils.WeatherResult
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ForecastScreen(item: Int,
                    uiState: WeatherAppUiState,
@@ -54,33 +66,78 @@ fun ForecastScreen(item: Int,
         is WeatherResult.Success -> weatherState.data.forecast.forecastday
         else -> emptyList()
     }
+    
+    val pagerState = rememberPagerState(initialPage = item) { 3 }
+    
+    val interactionSource = remember {MutableInteractionSource()}
+
+    LaunchedEffect(item) {
+        pagerState.scrollToPage(item)
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        weatherViewModel.changeSelectedItem(pagerState.currentPage)
+    }
+
     Scaffold (
         topBar = { ForecastdayTopBar(onBackButtonClick)}
     ){ innerPadding ->
-        Column(modifier = Modifier.padding(top = innerPadding.calculateTopPadding()).fillMaxWidth()) {
-            LazyRow (horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier.fillMaxWidth()){
-                itemsIndexed(forecastday) { index, forecastday ->
-                    val dayOfWeek =
-                        weatherViewModel.formatDate(forecastday.date, week = true, short = true)
-                    val dayOfMonth =
-                        weatherViewModel.formatDate(forecastday.date, week = false, short = true)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable{weatherViewModel.changeSelectedItem(index)}.padding(8.dp)) {
-                        Text(text = dayOfWeek, fontSize = 24.sp, modifier = Modifier.padding(vertical = 8.dp))
-                        Box(contentAlignment = Alignment.Center){
-                            if(index == uiState.selectedItem){
-                                Circle(color = Color.Gray)
+        Column(modifier = Modifier
+            .padding(top = innerPadding.calculateTopPadding())
+            .fillMaxWidth()) {
+            TabRow(selectedTabIndex = item) {
+                for(index in 0 until pagerState.pageCount){
+                    val dayOfWeek = weatherViewModel.formatDate(forecastday[index].date, week = true, short = true)
+                    val dayOfMonth = weatherViewModel.formatDate(forecastday[index].date, week = false, short = true)
+                    Tab(selected = index == item,
+                        modifier = Modifier.indication(interactionSource = interactionSource,
+                            indication = null),
+                        onClick = {
+                            weatherViewModel.changeSelectedItem(index)
+                        }) {
+                        Column{
+                            Text(text = dayOfWeek, fontSize = 24.sp, modifier = Modifier.padding(vertical = 8.dp))
+                            Box(contentAlignment = Alignment.Center){
+//                                if(index == uiState.selectedItem){
+//                                    Circle(color = Color.Gray)
+//                                }
+                                Text(text = dayOfMonth, fontSize = 24.sp)
                             }
-                            Text(text = dayOfMonth, fontSize = 24.sp)
                         }
                     }
                 }
             }
-            TemperatureCard(
-                forecastday = forecastday,
-                forecastdayNum = item
-            )
+            HorizontalPager(state = pagerState) { currentPage ->
+                TemperatureCard(
+                    forecastday = forecastday,
+                    forecastdayNum = currentPage
+                )
+            }
+//            LazyRow (horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier.fillMaxWidth()){
+//                itemsIndexed(forecastday) { index, forecastday ->
+//                    val dayOfWeek =
+//                        weatherViewModel.formatDate(forecastday.date, week = true, short = true)
+//                    val dayOfMonth =
+//                        weatherViewModel.formatDate(forecastday.date, week = false, short = true)
+//                    Column(
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                        modifier = Modifier
+//                            .clickable(
+//                                interactionSource = interactionSource,
+//                                indication = null
+//                            ) { weatherViewModel.changeSelectedItem(index) }
+//                            .padding(8.dp)) {
+//                        Text(text = dayOfWeek, fontSize = 24.sp, modifier = Modifier.padding(vertical = 8.dp))
+//                        Box(contentAlignment = Alignment.Center){
+//                            if(index == uiState.selectedItem){
+//                                Circle(color = Color.Gray)
+//                            }
+//                            Text(text = dayOfMonth, fontSize = 24.sp)
+//                        }
+//                    }
+//                }
+//            }
+
         }
     }
 }
@@ -89,9 +146,10 @@ fun ForecastScreen(item: Int,
 fun Circle(color: Color,
            modifier: Modifier = Modifier){
     Box(
-        modifier = modifier.size(40.dp)
-                .clip(CircleShape)
-                .background(color)
+        modifier = modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(color)
 
     )
 }
@@ -118,31 +176,42 @@ fun TemperatureCard(
     modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
-
-    Card(modifier = modifier
-        .padding(horizontal = 8.dp)
-        .fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth()){
-            repeat(4) {
-                val index = (24/4-1) + (it*6)
-                val painter = "https://${forecastday[forecastdayNum].hour[index].condition.icon}"
-                val temperature = forecastday[forecastdayNum].hour[index].temp_c.roundToInt().toString() + "°"
-                Column (horizontalAlignment = Alignment.CenterHorizontally){
-                    Text(text = when(it){
-                        0 -> stringResource(R.string.morning)
-                        1 -> stringResource(R.string.day)
-                        2 -> stringResource(R.string.evening)
-                        else -> stringResource(R.string.night)
-                    }, fontSize = 24.sp)
-                    AsyncImage(model = ImageRequest.Builder(context)
-                        .data(painter)
-                        .crossfade(true)
-                        .build(),
-                        contentDescription = forecastday[forecastdayNum].hour[index].condition.text,
-                        modifier = Modifier.size(48.dp))
-                    Text(text = temperature, fontSize = 24.sp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Card(
+            modifier = modifier
+                .padding(horizontal = 8.dp)
+                .fillMaxWidth()
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround, modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth()
+            ) {
+                repeat(4) {
+                    val index = (24 / 4 - 1) + (it * 6)
+                    val painter =
+                        "https://${forecastday[forecastdayNum].hour[index].condition.icon}"
+                    val temperature =
+                        forecastday[forecastdayNum].hour[index].temp_c.roundToInt().toString() + "°"
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = when (it) {
+                                0 -> stringResource(R.string.morning)
+                                1 -> stringResource(R.string.day)
+                                2 -> stringResource(R.string.evening)
+                                else -> stringResource(R.string.night)
+                            }, fontSize = 24.sp
+                        )
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(painter)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = forecastday[forecastdayNum].hour[index].condition.text,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(text = temperature, fontSize = 24.sp)
+                    }
                 }
             }
         }

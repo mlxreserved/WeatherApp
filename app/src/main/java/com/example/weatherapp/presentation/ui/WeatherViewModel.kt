@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Network
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import com.example.weatherapp.data.repository.CoordinateRepository
 import com.example.weatherapp.data.repository.CoordinateRepositoryImpl
 import com.example.weatherapp.data.repository.WeatherRepository
 import com.example.weatherapp.data.repository.WeatherRepositoryImpl
+import com.example.weatherapp.datastore.StoreTheme
 import com.example.weatherapp.di.MainApp
 import com.example.weatherapp.utils.WeatherResult
 import com.github.pemistahl.lingua.api.Language
@@ -66,7 +68,9 @@ private const val COORDINATE_TAG = "COORDINATE"
 data class WeatherAppUiState(
     val weatherUiState: WeatherResult = WeatherResult.Loading,
     val selectedItem: Int = -1,
-
+    val currentTheme: Boolean? = null,
+    val currentEnterDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Right,
+    val currentExitDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Left,
     //val isLoaded: Boolean = false,
     val coordinateList: List<String> = emptyList(),
     val hourList: MutableList<Hour> = mutableListOf(),
@@ -79,6 +83,9 @@ data class SearchUiState(
     val storyOfSearch: List<City> = listOf(),
     )
 
+data class SettingState(
+    val currentTheme: Boolean? = null,
+)
 
 //
 //data class CityState(
@@ -98,11 +105,8 @@ data class SearchUiState(
 class WeatherViewModel (
     private val weatherRepository: WeatherRepository,
     private val coordinateRepository: CoordinateRepository,
-    private val citiesRepository: CitiesRepository
+    private val citiesRepository: CitiesRepository,
 ): ViewModel() {
-
-
-
     private val _uiStateWeather = MutableStateFlow(WeatherAppUiState())
     val uiStateWeather: StateFlow<WeatherAppUiState> = _uiStateWeather.asStateFlow()
 
@@ -114,14 +118,17 @@ class WeatherViewModel (
             initialValue = SearchUiState()
         )
 
+    private val _settingState = MutableStateFlow(SettingState())
+    val settingState: StateFlow<SettingState> = _settingState.asStateFlow()
+
     init{
+
         getWeather("Москва", true)
     }
 
     fun getWeather(city: String, isReloading: Boolean){
         if (city.isNotBlank()) {
             getLanguage(city)
-            //changeIsLoaded()
             viewModelScope.launch {
                 _uiStateWeather.update { it.copy(weatherUiState = WeatherResult.Loading) }
                 val res = try { // Попытка получить погоду
@@ -258,11 +265,17 @@ class WeatherViewModel (
     }
 
     @SuppressLint("NewApi")
-    fun formatTime(time: String): String{
+    fun formatTime(time: String, isNextDay: Boolean): String{
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-        val formattedTime = LocalDateTime.parse(time,formatter)
-        return formattedTime.format(timeFormatter)
+        if(!isNextDay){
+            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+            val formattedTime = LocalDateTime.parse(time,formatter)
+            return formattedTime.format(timeFormatter)
+        } else {
+            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm d MMM")
+            val formattedTime = LocalDateTime.parse(time,formatter)
+            return formattedTime.format(timeFormatter)
+        }
     }
 
     @SuppressLint("NewApi")
@@ -288,9 +301,23 @@ class WeatherViewModel (
         }
         cityFullName = cityNameItems.joinToString(", ")
         return Triple(position, cityName, cityFullName)
-
     }
 
+    fun changeTheme(selectedTheme: Boolean?){
+        _settingState.update { it.copy(currentTheme = selectedTheme) }
+    }
+
+    fun changeDirectionToSearch(){
+        _uiStateWeather.update { it.copy(currentEnterDirection = AnimatedContentTransitionScope.SlideDirection.Right,
+            currentExitDirection = AnimatedContentTransitionScope.SlideDirection.Left)
+        }
+    }
+
+    fun changeDirectionToSettings(){
+        _uiStateWeather.update { it.copy(currentEnterDirection = AnimatedContentTransitionScope.SlideDirection.Left,
+            currentExitDirection = AnimatedContentTransitionScope.SlideDirection.Right)
+        }
+    }
 
     companion object{
         private const val TIMEOUT_MILLIS = 5_000L

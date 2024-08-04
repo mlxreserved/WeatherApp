@@ -1,5 +1,6 @@
 package com.example.weatherapp.presentation.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
@@ -95,6 +98,7 @@ fun SearchTopBar(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
     stateSearch: SearchUiState,
@@ -115,43 +119,43 @@ fun SearchScreen(
                 onBackButtonClick = onBackButtonClick)
         }
     ){ innerPadding ->
-        if(state.textFieldCity.isNotBlank()) {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(top = innerPadding.calculateTopPadding())
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(state.coordinateList) { currentCity ->
-                    SearchCard(city = currentCity, onClick = {
+            if (state.textFieldCity.isNotBlank()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(top = innerPadding.calculateTopPadding())
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.coordinateList) { currentCity ->
+                        SearchCard(city = currentCity, onClick = {
 
-                        weatherViewModel.getWeather(currentCity, false)
-                        weatherViewModel.closeSearchScreen()
-                        navController.navigateUp()
+                            weatherViewModel.getWeather(currentCity, false)
+                            weatherViewModel.closeSearchScreen()
+                            navController.navigateUp()
 
-                    })
+                        })
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(top = innerPadding.calculateTopPadding() + 8.dp)
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Text(text = stringResource(R.string.history), fontSize = 24.sp)
+                    }
+                    items(stateSearch.storyOfSearch) { currentCity ->
+                        SearchCard(city = currentCity.name, onClick = {
+                            weatherViewModel.getWeather(currentCity.name, false)
+                            weatherViewModel.closeSearchScreen()
+                            navController.navigateUp()
+
+                        })
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(top = innerPadding.calculateTopPadding() + 8.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item{
-                    Text(text = stringResource(R.string.history), fontSize = 24.sp)
-                }
-                items(stateSearch.storyOfSearch) { currentCity ->
-                    SearchCard(city = currentCity.name, onClick = {
-                        weatherViewModel.getWeather(currentCity.name, false)
-                        weatherViewModel.closeSearchScreen()
-                        navController.navigateUp()
-
-                    })
-                }
-            }
-        }
     }
 }
 

@@ -1,7 +1,11 @@
 package com.example.weatherapp.di
 
 import android.app.Application
+import android.content.Context
 import android.provider.ContactsContract.Data
+import androidx.datastore.preferences.preferencesDataStore
+import com.example.weatherapp.datastore.StoreTheme
+
 
 class MainApp: Application() {
 

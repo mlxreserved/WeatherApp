@@ -1,8 +1,10 @@
 package com.example.weatherapp.presentation.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -42,6 +47,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +76,7 @@ import com.example.weatherapp.utils.WeatherResult
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     uiState: WeatherAppUiState,
@@ -78,7 +84,8 @@ fun MainScreen(
     weatherState: WeatherResult,
     onClick: (Int) -> Unit,
     weatherViewModel: WeatherViewModel,
-    onBackButtonClick: () -> Unit,
+    onSearchButtonClick: () -> Unit,
+    onSettingsButtonClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -98,46 +105,49 @@ fun MainScreen(
 
     Scaffold(topBar = {
          MainTopBar(
-            city,
-            onBackButtonClick = onBackButtonClick)
+             city,
+             onSearchButtonClick= onSearchButtonClick,
+             onSettingsButtonClick = onSettingsButtonClick)
     }
     ) { innerPadding ->
         Box(
             Modifier.pullRefresh(pullRefreshState)
         ) {
-            when (weatherState) {
 
-                is WeatherResult.Success ->
 
-                    SuccessScreen(
-                        weatherViewModel = weatherViewModel,
-                        onClick = onClick,
-                        forecastday = weatherState.data.forecast.forecastday,
-                        painter = "https://${weatherState.data.current.condition.icon}",
-                        condition = weatherState.data.current.condition.text,
-                        degrees = "${weatherState.data.current.tempCelsius.roundToInt()}\u00B0",
-                        uiState = uiState,
-                        modifier = Modifier.padding(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = innerPadding.calculateBottomPadding()
+                when (weatherState) {
+
+                    is WeatherResult.Success ->
+
+                        SuccessScreen(
+                            weatherViewModel = weatherViewModel,
+                            onClick = onClick,
+                            forecastday = weatherState.data.forecast.forecastday,
+                            painter = "https://${weatherState.data.current.condition.icon}",
+                            condition = weatherState.data.current.condition.text,
+                            degrees = "${weatherState.data.current.tempCelsius.roundToInt()}\u00B0",
+                            uiState = uiState,
+                            modifier = Modifier.padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = innerPadding.calculateBottomPadding()
+                            )
                         )
-                    )
 
-                is WeatherResult.Error -> ErrorScreen()
+                    is WeatherResult.Error -> ErrorScreen()
 
-                is WeatherResult.Loading ->
-                    LoadingScreen(
-                        uiState = uiState,
-                        navController = navController,
+                    is WeatherResult.Loading ->
+                        LoadingScreen(
+                            uiState = uiState,
+                            navController = navController,
+                        )
+                }
+                PullRefreshIndicator(
+                    refreshing,
+                    pullRefreshState,
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = innerPadding.calculateTopPadding())
                 )
-            }
-            PullRefreshIndicator(
-                refreshing,
-                pullRefreshState,
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = innerPadding.calculateTopPadding())
-            )
         }
     }
 }
@@ -147,7 +157,8 @@ fun MainScreen(
 @Composable
 fun MainTopBar(
     city: String,
-    onBackButtonClick: () -> Unit
+    onSettingsButtonClick: () -> Unit,
+    onSearchButtonClick: () -> Unit
 ){
     TopAppBar(
         title = {
@@ -156,12 +167,20 @@ fun MainTopBar(
                 Spacer(modifier = Modifier.width(24.dp))
                 Text(text = city, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
 
-                IconButton(onClick =  onBackButtonClick) {
+                IconButton(onClick =  onSearchButtonClick) {
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = null
                     )
                 }
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onSettingsButtonClick ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.settings)
+                )
             }
         }
     )
@@ -259,7 +278,14 @@ fun HourCard(
 
     Card{
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)){
-            Text(text = weatherViewModel.formatTime(hour.time), modifier = Modifier.weight(1f))
+            Text(
+                text = if(hour.time.substring(hour.time.length-5) != "00:00")
+                    weatherViewModel.formatTime(hour.time, false)
+                else
+                    weatherViewModel.formatTime(hour.time, true),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp))
             AsyncImage(model = ImageRequest.Builder(context)
                 .data(painter)
                 .crossfade(true)
@@ -281,10 +307,14 @@ fun ForecastCard(
     weatherViewModel: WeatherViewModel,
     modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val interactionSource = remember{ MutableInteractionSource() }
     Card(
         modifier = modifier
             .width(175.dp)
-            .clickable { onClick(item) }){
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onClick(item) }){
         Column(
             modifier = Modifier
                 .fillMaxWidth()

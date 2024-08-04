@@ -81,7 +81,7 @@ dependencies {
     // Retrofit 2
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
 
-    // Needed to get a view model reference in Jetpack Compose
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // kotlin Serialization
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
@@ -99,6 +99,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.4.3")
 
     implementation("com.github.pemistahl:lingua:1.2.2")
+
+    implementation("dev.lcdsmao.jettheme:jettheme-material:1.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

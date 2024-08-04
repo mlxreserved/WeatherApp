@@ -17,6 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.weatherapp.data.api.model.Weather
+import com.example.weatherapp.presentation.ui.WeatherViewModel
+import dev.lcdsmao.jettheme.material.buildMaterialThemePack
+import dev.lcdsmao.jettheme.material.defaultMaterialTheme
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -258,7 +263,6 @@ val unspecified_scheme = ColorFamily(
     Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
 )
 
-
 @Composable
 fun WeatherAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -266,21 +270,23 @@ fun WeatherAppTheme(
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit
 ) {
-
-  val colorScheme = when {
+    val colorScheme = when {
       dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
           val context = LocalContext.current
           if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
       }
-      
+
       darkTheme -> darkScheme
       else -> lightScheme
   }
 
-  MaterialTheme(
+
+
+    MaterialTheme(
     colorScheme = colorScheme,
     typography = Typography,
     content = content
   )
+
 }
 
