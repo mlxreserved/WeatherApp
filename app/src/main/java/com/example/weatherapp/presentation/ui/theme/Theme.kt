@@ -1,6 +1,5 @@
 package com.example.weatherapp.presentation.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -8,20 +7,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.weatherapp.data.api.model.Weather
-import com.example.weatherapp.presentation.ui.WeatherViewModel
-import dev.lcdsmao.jettheme.material.buildMaterialThemePack
-import dev.lcdsmao.jettheme.material.defaultMaterialTheme
+import com.example.weatherapp.data.repository.ThemeType
+import com.example.weatherapp.presentation.ui.models.ModelProvider
+import com.example.weatherapp.presentation.ui.models.ThemeModel
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -270,13 +264,22 @@ fun WeatherAppTheme(
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit
 ) {
+
+    val model: ThemeModel = viewModel(factory = ModelProvider.Factory)
+
+    val isDarkTheme = when (model.isDarkTheme.collectAsState().value) {
+        ThemeType.SYSTEM -> isSystemInDarkTheme()
+        ThemeType.LIGHT -> false
+        ThemeType.DARK -> true
+    }
+
     val colorScheme = when {
       dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
           val context = LocalContext.current
-          if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+          if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
       }
 
-      darkTheme -> darkScheme
+      isDarkTheme -> darkScheme
       else -> lightScheme
   }
 

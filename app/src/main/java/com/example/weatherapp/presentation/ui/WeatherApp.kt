@@ -1,89 +1,41 @@
 package com.example.weatherapp.presentation.ui
 
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.text.KeyboardActionScope
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
-
 import androidx.lifecycle.viewmodel.compose.viewModel
+
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.weatherapp.R
-import com.example.weatherapp.data.api.model.Weather
-import com.example.weatherapp.datastore.StoreTheme
-import com.example.weatherapp.presentation.ui.screens.ForecastCard
+import com.example.weatherapp.presentation.ui.models.ModelProvider
+import com.example.weatherapp.presentation.ui.models.SettingsModel
+import com.example.weatherapp.presentation.ui.models.WeatherViewModel
 import com.example.weatherapp.presentation.ui.screens.ForecastScreen
 import com.example.weatherapp.presentation.ui.screens.MainScreen
 import com.example.weatherapp.presentation.ui.screens.SearchScreen
 import com.example.weatherapp.presentation.ui.screens.SettingScreen
 import com.example.weatherapp.utils.WeatherAppScreens
-import com.example.weatherapp.utils.WeatherResult
-import kotlinx.coroutines.coroutineScope
-import javax.inject.Inject
 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WeatherApp(
-    storeTheme: StoreTheme,
     weatherViewModel: WeatherViewModel,
     navController: NavHostController,
     modifier: Modifier = Modifier){
 
-
+    val settingsModel: SettingsModel = viewModel(factory = ModelProvider.Factory)
     val state by weatherViewModel.uiStateWeather.collectAsState()
     val stateSearch by weatherViewModel.uiStateSearch.collectAsState()
-    val settingState by weatherViewModel.settingState.collectAsState()
+    val settingState by settingsModel.themeType.collectAsState()
     val city = state.textFieldCity
 
 
@@ -207,7 +159,7 @@ fun WeatherApp(
                         )
                     )
                 }){
-                SettingScreen(storeTheme = storeTheme, onBackButtonClick = { navController.navigateUp() }, settingState = settingState, weatherViewModel = weatherViewModel)
+                SettingScreen(onBackButtonClick = { navController.navigateUp() }, settingState = settingState, settingsModel = settingsModel)
             }
         }
     }

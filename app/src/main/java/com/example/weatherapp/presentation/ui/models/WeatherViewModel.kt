@@ -1,65 +1,41 @@
-package com.example.weatherapp.presentation.ui
+package com.example.weatherapp.presentation.ui.models
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.net.Network
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.weatherapp.data.City
-import com.example.weatherapp.data.api.WeatherService
 import com.example.weatherapp.data.api.model.Coordinate
-import com.example.weatherapp.data.api.model.Forecastday
 import com.example.weatherapp.data.api.model.Hour
 import com.example.weatherapp.data.api.model.Weather
 import com.example.weatherapp.data.repository.CitiesRepository
 import com.example.weatherapp.data.repository.CoordinateRepository
-import com.example.weatherapp.data.repository.CoordinateRepositoryImpl
 import com.example.weatherapp.data.repository.WeatherRepository
-import com.example.weatherapp.data.repository.WeatherRepositoryImpl
-import com.example.weatherapp.datastore.StoreTheme
 import com.example.weatherapp.di.MainApp
 import com.example.weatherapp.utils.WeatherResult
 import com.github.pemistahl.lingua.api.Language
 import com.github.pemistahl.lingua.api.LanguageDetector
 import com.github.pemistahl.lingua.api.LanguageDetectorBuilder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Date
-import javax.inject.Inject
 
 private const val WEATHER_TAG = "WEATHER"
 private const val COORDINATE_TAG = "COORDINATE"
@@ -83,9 +59,6 @@ data class SearchUiState(
     val storyOfSearch: List<City> = listOf(),
     )
 
-data class SettingState(
-    val currentTheme: Boolean? = null,
-)
 
 //
 //data class CityState(
@@ -118,11 +91,7 @@ class WeatherViewModel (
             initialValue = SearchUiState()
         )
 
-    private val _settingState = MutableStateFlow(SettingState())
-    val settingState: StateFlow<SettingState> = _settingState.asStateFlow()
-
     init{
-
         getWeather("Москва", true)
     }
 
@@ -303,9 +272,6 @@ class WeatherViewModel (
         return Triple(position, cityName, cityFullName)
     }
 
-    fun changeTheme(selectedTheme: Boolean?){
-        _settingState.update { it.copy(currentTheme = selectedTheme) }
-    }
 
     fun changeDirectionToSearch(){
         _uiStateWeather.update { it.copy(currentEnterDirection = AnimatedContentTransitionScope.SlideDirection.Right,
