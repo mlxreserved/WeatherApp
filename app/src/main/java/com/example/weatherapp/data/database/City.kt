@@ -1,8 +1,7 @@
-package com.example.weatherapp.data
+package com.example.weatherapp.data.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDateTime
 
 @Entity(tableName = "cities")
 data class City(

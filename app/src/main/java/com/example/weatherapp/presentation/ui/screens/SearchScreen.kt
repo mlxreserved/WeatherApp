@@ -88,7 +88,6 @@ fun SearchTopBar(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
     stateSearch: SearchUiState,

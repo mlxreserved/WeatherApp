@@ -1,7 +1,7 @@
 package com.example.weatherapp.data.repository
 
-import com.example.weatherapp.data.City
-import com.example.weatherapp.data.CityDao
+import com.example.weatherapp.data.database.City
+import com.example.weatherapp.data.database.CityDao
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

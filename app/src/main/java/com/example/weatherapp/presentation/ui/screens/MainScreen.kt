@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +55,8 @@ import com.example.weatherapp.data.api.model.Hour
 import com.example.weatherapp.presentation.ui.models.WeatherAppUiState
 import com.example.weatherapp.presentation.ui.models.WeatherViewModel
 import com.example.weatherapp.utils.WeatherResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
@@ -141,7 +147,6 @@ fun MainTopBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                Spacer(modifier = Modifier.width(24.dp))
                 Text(text = city, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
 
                 IconButton(onClick =  onSearchButtonClick) {
@@ -176,42 +181,48 @@ fun SuccessScreen(uiState: WeatherAppUiState,
                   modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    LazyColumn(
+        modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)){
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = degrees,
+                        fontSize = 28.sp
+                    )
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(painter)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = condition,
+                        modifier = Modifier.size(64.dp)
+                    )
 
-    Column(
-        modifier
-            .verticalScroll(rememberScrollState())
-            .fillMaxSize()){
-        Column(modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = degrees,
-                    fontSize = 28.sp
-                )
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(painter)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = condition,
-                    modifier = Modifier.size(64.dp)
-                )
+                }
+                Text(text = condition)
             }
-            Text(text = condition)
-        }
-        Text(text = stringResource(R.string.three_day_forecast), modifier = Modifier.padding(horizontal = 8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(8.dp)
-        ) {
-            items(forecastday.size){ item ->
-                ForecastCard( forecastday = forecastday[item],
-                    painter = "https://${forecastday[item].day.condition.icon}",
-                    condition = forecastday[item].day.condition.text,
-                    item = item,
-                    onClick = onClick,
-                    weatherViewModel = weatherViewModel )
+            Text(text = stringResource(R.string.three_day_forecast), modifier = Modifier.padding(horizontal = 8.dp))
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(forecastday.size){ item ->
+                    ForecastCard( forecastday = forecastday[item],
+                        painter = "https://${forecastday[item].day.condition.icon}",
+                        condition = forecastday[item].day.condition.text,
+                        item = item,
+                        onClick = onClick,
+                        weatherViewModel = weatherViewModel )
+                }
             }
+            Text(text = stringResource(R.string.today), modifier = Modifier.padding(horizontal = 8.dp))
         }
+
         /*Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ){
@@ -224,8 +235,20 @@ fun SuccessScreen(uiState: WeatherAppUiState,
 
             }
         }*/
-        Text(text = stringResource(R.string.today), modifier = Modifier.padding(horizontal = 8.dp))
-        HourColumn(uiState.hourList, modifier = Modifier.padding(horizontal = 8.dp), weatherViewModel = weatherViewModel)
+
+        items(items = uiState.hourList,
+            key = {
+                it.time_epoch
+            }
+        ) { hour ->
+            HourCard(hour = hour,
+                painter = "https://${hour.condition.icon}",
+                condition = hour.condition.text,
+                degrees = "${hour.temp_c.roundToInt()}\u00B0",
+                weatherViewModel = weatherViewModel )
+        }
+
+        //HourColumn(uiState.hourList, modifier = Modifier.padding(horizontal = 8.dp), weatherViewModel = weatherViewModel)
     }
 }
 
@@ -250,12 +273,13 @@ fun HourCard(
     painter: String,
     condition: String,
     degrees: String,
-    weatherViewModel: WeatherViewModel
+    weatherViewModel: WeatherViewModel,
+    modifier: Modifier = Modifier
 ){
     val context = LocalContext.current
 
     Card{
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)){
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(64.dp)){
             Text(
                 text = if(hour.time.substring(hour.time.length-5) != "00:00")
                     weatherViewModel.formatTime(hour.time, false)

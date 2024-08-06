@@ -9,13 +9,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 // Key for storing dynamic theme preference
 const val THEME_TYPE = "theme_type"
 
 enum class ThemeType { SYSTEM, LIGHT, DARK }
 
-class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
+class DataStoreRepository @Inject constructor(private val dataStore: DataStore<Preferences>) {
     private companion object {
         val themeType = intPreferencesKey(THEME_TYPE)
     }

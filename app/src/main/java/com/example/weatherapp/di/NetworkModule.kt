@@ -24,7 +24,6 @@ private const val BASE_URL_WEATHER = "https://api.weatherapi.com/v1/"
 interface AppComponent{
     val weatherRepository: WeatherRepository
     val coordinateRepository: CoordinateRepository
-
 }
 
 @Module(includes = [NetworkModule::class, AppBindModule::class])

@@ -1,9 +1,8 @@
 package com.example.weatherapp.di
 
 import android.content.Context
-import androidx.room.Room
-import com.example.weatherapp.data.CityDao
-import com.example.weatherapp.data.CityDatabase
+import com.example.weatherapp.data.database.CityDao
+import com.example.weatherapp.data.database.CityDatabase
 import com.example.weatherapp.data.repository.CitiesRepository
 import com.example.weatherapp.data.repository.OfflineCitiesRepository
 import dagger.Binds
@@ -23,12 +22,12 @@ class DatabaseModule(private val context: Context){
 
     @Singleton
     @Provides
-    fun provideCityDatabase(): CityDatabase{
+    fun provideCityDatabase(): CityDatabase {
         return CityDatabase.getDatabase(context)
     }
 
     @Provides
-    fun provideCityDao(db: CityDatabase): CityDao{
+    fun provideCityDao(db: CityDatabase): CityDao {
         return db.cityDao()
     }
 }

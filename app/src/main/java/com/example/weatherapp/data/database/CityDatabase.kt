@@ -1,11 +1,9 @@
-package com.example.weatherapp.data
+package com.example.weatherapp.data.database
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
 
 @Database(entities = [City::class], version = 2, exportSchema = false)
 abstract class CityDatabase: RoomDatabase() {

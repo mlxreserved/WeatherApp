@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.weatherapp.data.City
+import com.example.weatherapp.data.database.City
 import com.example.weatherapp.data.api.model.Coordinate
 import com.example.weatherapp.data.api.model.Hour
 import com.example.weatherapp.data.api.model.Weather
